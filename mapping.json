@@ -1,0 +1,207 @@
+{
+    "d": [
+        {
+            "whmcs_id": 65,
+            "whmcs_product_name": "Office 365",
+            "dicker": []
+        },
+        {
+            "whmcs_id": 92,
+            "whmcs_product_name": "Office 365 Business Standard (Business Premium)",
+            "dicker": []
+        },
+        {
+            "whmcs_id": 93,
+            "whmcs_product_name": "Office 365 Exchange Online",
+            "dicker": []
+        },
+        {
+            "whmcs_id": 102,
+            "whmcs_product_name": "Office 365 Business Basic (Essentials)",
+            "dicker": []
+        },
+        {
+            "whmcs_id": 114,
+            "whmcs_product_name": "Office 365 Apps",
+            "dicker": [
+                {
+                    "subscription_reference": "Microsoft 365 Apps for busines",
+                    "stock_description": "MS NCE M365 APPS FOR BUSINESS 1MTH COMMIT",
+                    "manufacturer_stock_code": "P1M:CFQ7TTC0LH1G:0001:1:"
+                }
+            ]
+        },
+        {
+            "whmcs_id": 125,
+            "whmcs_product_name": "Office 365 Business Standard (not for profit pricing)",
+            "dicker": [
+                {
+                    "subscription_reference": "Microsoft 365 Business Basic D",
+                    "stock_description": "MS NCE M365 BUSINESS BASIC DONATION (NON-PROFIT PRICING) 1YR COMMIT",
+                    "manufacturer_stock_code": "P1Y:CFQ7TTC0LH18:000L:1:"
+                },
+                {
+                    "subscription_reference": "Microsoft 365 Business Premium",
+                    "stock_description": "MS NCE M365 BUSINESS PREMIUM DONATION (NON-PROFIT PRICING) 1YR COMMIT",
+                    "manufacturer_stock_code": "P1Y:CFQ7TTC0LCHC:000W:Y:"
+                }
+            ]
+        },
+        {
+            "whmcs_id": 128,
+            "whmcs_product_name": "Office 365 Exchange Online Plan 2",
+            "dicker": []
+        },
+        {
+            "whmcs_id": 134,
+            "whmcs_product_name": "Office 365 Visio Plan 2 - Year Commit",
+            "dicker": []
+        },
+        {
+            "whmcs_id": 135,
+            "whmcs_product_name": "Office 365 Teams Essentials - Year Commit",
+            "dicker": [
+                {
+                    "subscription_reference": "Microsoft Teams Essentials",
+                    "stock_description": "MS NCE MICROSOFT TEAMS ESSENTIALS 1YR COMMIT",
+                    "manufacturer_stock_code": "P1Y:CFQ7TTC0JN4R:0002:1:"
+                }
+            ]
+        },
+        {
+            "whmcs_id": 140,
+            "whmcs_product_name": "Office 365 Business Basic - Year Commit",
+            "dicker": [
+                {
+                    "subscription_reference": "Microsoft 365 Business Basic",
+                    "stock_description": "MS NCE M365 BUSINESS BASIC 1YR COMMIT",
+                    "manufacturer_stock_code": "P1Y:CFQ7TTC0LH18:0001:Y:"
+                },
+                {
+                    "subscription_reference": "Microsoft 365 Business Basic",
+                    "stock_description": "MS NCE M365 BUSINESS BASIC 1YR COMMIT",
+                    "manufacturer_stock_code": "P1Y:CFQ7TTC0LH18:0001:1:"
+                },
+                {
+                    "subscription_reference": "Microsoft 365 Business Basic (",
+                    "stock_description": "MS NCE M365 BUSINESS BASIC (NO TEAMS) 1YR COMMIT",
+                    "manufacturer_stock_code": "P1Y:CFQ7TTC0LH18:000P:1:"
+                }
+            ]
+        },
+        {
+            "whmcs_id": 141,
+            "whmcs_product_name": "Office 365 Business Standard - Year Commit",
+            "dicker": [
+                {
+                    "subscription_reference": "Microsoft 365 Business Standar",
+                    "stock_description": "MS NCE M365 BUSINESS STD 1YR COMMIT",
+                    "manufacturer_stock_code": "P1Y:CFQ7TTC0LDPB:0001:1:"
+                },
+                {
+                    "subscription_reference": "Microsoft 365 Business Standar",
+                    "stock_description": "MS NCE M365 BUSINESS STD (NO TEAMS) 1YR COMMIT",
+                    "manufacturer_stock_code": "P1Y:CFQ7TTC0LDPB:0011:1:"
+                }
+            ]
+        },
+        {
+            "whmcs_id": 142,
+            "whmcs_product_name": "Office 365 Action Pack",
+            "dicker": []
+        },
+        {
+            "whmcs_id": 143,
+            "whmcs_product_name": "Office 365 Exchange Online - Year Commit",
+            "dicker": [
+                {
+                    "subscription_reference": "Exchange Online (Plan 1)",
+                    "stock_description": "MS NCE EXCHANGE ONLINE PLAN 1 1YR COMMIT",
+                    "manufacturer_stock_code": "P1Y:CFQ7TTC0LH16:0001:Y:"
+                },
+                {
+                    "subscription_reference": "Exchange Online (Plan 1)",
+                    "stock_description": "MS NCE EXCHANGE ONLINE PLAN 1 1YR COMMIT",
+                    "manufacturer_stock_code": "P1Y:CFQ7TTC0LH16:0001:1:"
+                }
+            ]
+        },
+        {
+            "whmcs_id": 146,
+            "whmcs_product_name": "Office 365 Exchange Online Plan 2 - Year Commit",
+            "dicker": [
+                {
+                    "subscription_reference": "Exchange Online (Plan 2)",
+                    "stock_description": "MS NCE EXCHANGE ONLINE PLAN 2 1YR COMMIT",
+                    "manufacturer_stock_code": "P1Y:CFQ7TTC0LH1P:0001:1:"
+                }
+            ]
+        },
+        {
+            "whmcs_id": 147,
+            "whmcs_product_name": "Office 365 Apps - Year Commit",
+            "dicker": [
+                {
+                    "subscription_reference": "Microsoft 365 Apps for busines",
+                    "stock_description": "MS NCE M365 APPS FOR BUSINESS 1YR COMMIT",
+                    "manufacturer_stock_code": "P1Y:CFQ7TTC0LH1G:0001:1:"
+                }
+            ]
+        },
+        {
+            "whmcs_id": 149,
+            "whmcs_product_name": "Office 365 Exchange Online - Month Commit",
+            "dicker": [
+                {
+                    "subscription_reference": "Exchange Online (Plan 1)",
+                    "stock_description": "MS NCE EXCHANGE ONLINE PLAN 1 1MTH COMMIT",
+                    "manufacturer_stock_code": "P1M:CFQ7TTC0LH16:0001:1:"
+                }
+            ]
+        },
+        {
+            "whmcs_id": 150,
+            "whmcs_product_name": "Office 365 Exchange Online Plan 2 - Month Commit",
+            "dicker": []
+        },
+        {
+            "whmcs_id": 151,
+            "whmcs_product_name": "Office 365 Business Basic - Month Commit",
+            "dicker": [
+                {
+                    "subscription_reference": "Microsoft 365 Business Basic",
+                    "stock_description": "MS NCE M365 BUSINESS BASIC 1MTH COMMIT",
+                    "manufacturer_stock_code": "P1M:CFQ7TTC0LH18:0001:1:"
+                }
+            ]
+        },
+        {
+            "whmcs_id": 152,
+            "whmcs_product_name": "Office 365 Business Standard - Month Commit",
+            "dicker": [
+                {
+                    "subscription_reference": "Microsoft 365 Business Standar",
+                    "stock_description": "MS NCE M365 BUSINESS STD 1MTH COMMIT",
+                    "manufacturer_stock_code": "P1M:CFQ7TTC0LDPB:0001:1:"
+                }
+            ]
+        },
+        {
+            "whmcs_id": 160,
+            "whmcs_product_name": "Office 365 Power BI Pro - Year Commit",
+            "dicker": [
+                {
+                    "subscription_reference": "Power BI Pro",
+                    "stock_description": "MS NCE POWER BI PRO 1YR COMMIT",
+                    "manufacturer_stock_code": "P1Y:CFQ7TTC0LHSF:0001:1:"
+                }
+            ]
+        }
+    ],
+    "dicker": {
+        "packages": []
+    },
+    "whmcs": {
+        "packages": []
+    }
+}

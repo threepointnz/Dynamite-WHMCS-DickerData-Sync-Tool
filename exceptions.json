@@ -1,0 +1,46 @@
+[
+    {
+        "client_id": 1055,
+        "manufacturer_stock_code": "P1Y:CFQ7TTC0LH18:0001:1:",
+        "expected_whmcs_qty": 0,
+        "expected_dicker_qty": 1,
+        "reason": "Work around",
+        "apply_to": "unmatched",
+        "subscription_id": "Microsoft 365 Business Basic",
+        "created_at": "2025-11-28 00:35:05",
+        "created_by": "system"
+    },
+    {
+        "client_id": 707,
+        "manufacturer_stock_code": "P1Y:CFQ7TTC0LH16:0001:1:",
+        "expected_whmcs_qty": 24,
+        "expected_dicker_qty": 22,
+        "reason": "test",
+        "apply_to": "client",
+        "subscription_id": null,
+        "created_at": "2025-11-28 01:08:03",
+        "created_by": "system"
+    },
+    {
+        "client_id": 507,
+        "manufacturer_stock_code": "P1M:CFQ7TTC0LH1G:0001:1:",
+        "expected_whmcs_qty": 0,
+        "expected_dicker_qty": 1,
+        "reason": "z",
+        "apply_to": "unmatched",
+        "subscription_id": "Microsoft 365 Apps for busines",
+        "created_at": "2025-11-28 01:25:36",
+        "created_by": "system"
+    },
+    {
+        "client_id": 702,
+        "manufacturer_stock_code": "P1Y:CFQ7TTC0LH16:0001:1:",
+        "expected_whmcs_qty": 11,
+        "expected_dicker_qty": 12,
+        "reason": "bb",
+        "apply_to": "client",
+        "subscription_id": null,
+        "created_at": "2025-11-28 01:26:24",
+        "created_by": "system"
+    }
+]
