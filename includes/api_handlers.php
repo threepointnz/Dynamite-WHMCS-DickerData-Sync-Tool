@@ -44,8 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $content = file_get_contents($exceptionsPath);
             $exceptions = json_decode($content, true) ?: [];
         }
-
         $clientId = isset($_POST['client_id']) && $_POST['client_id'] !== '' ? (int) $_POST['client_id'] : 0;
+        $productId = isset($_POST['product_id']) && $_POST['product_id'] !== '' ? (int) $_POST['product_id'] : null;
         $manufacturerStockCode = trim($_POST['manufacturer_stock_code'] ?? '');
         $expectedWhmcsQty = (int) ($_POST['expected_whmcs_qty'] ?? 0);
         $expectedDickerQty = (int) ($_POST['expected_dicker_qty'] ?? 0);
@@ -53,8 +53,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $applyTo = trim($_POST['apply_to'] ?? 'client');
         $subscriptionId = trim($_POST['subscription_id'] ?? '');
 
+        // Debug: log what we received
+        error_log('Exception POST data - product_id raw: ' . var_export($_POST['product_id'] ?? 'NOT_SET', true));
+        error_log('Exception POST data - product_id parsed: ' . var_export($productId, true));
+
         $newException = [
             'client_id' => $clientId,
+            'product_id' => $productId,
             'manufacturer_stock_code' => $manufacturerStockCode,
             'expected_whmcs_qty' => $expectedWhmcsQty,
             'expected_dicker_qty' => $expectedDickerQty,

@@ -40,9 +40,8 @@
                             ];
                             if (in_array($clientId, $skipped)) {
                                 continue;
-                            }
-
-                            // Calculate issues and row color using matrix data
+                            }                            // Calculate issues and row color using matrix data
+                            // Note: matrix has already been filtered to exclude items with matching exceptions
                             $issues = array();
                             $rowClass = '';
 
@@ -66,10 +65,14 @@
                             if ($hasUnmatchedSubscriptions) {
                                 $issues[] = 'Unmatched Dicker subscriptions exist';
                                 $rowClass = 'bg-red-50 dark:bg-red-900/20';
-                            }
-                            // Detailed matrix analysis for quantity mismatches
+                            }                            // Detailed matrix analysis for quantity mismatches
                             if ($hasMatrix) {
                                 foreach ($client['matrix'] as $matrixItem) {
+                                    // Skip items with exceptions - they are approved mismatches
+                                    if (!empty($matrixItem['has_exception'])) {
+                                        continue;
+                                    }
+
                                     $productQty = (int) ($matrixItem['product_qty'] ?? 0);
                                     $subQty = (int) ($matrixItem['sub_qty'] ?? 0);
                                     $productName = $matrixItem['matched_product_name'] ?? 'Unknown Product';
@@ -153,34 +156,37 @@
                                                 d="M19 9l-7 7-7-7">
                                             </path>
                                         </svg>
-                                        <?php echo htmlspecialchars($client['companyname']); ?>
+                                        <?php echo htmlspecialchars($client['companyname']); ?>         <?php
+                                                    // Check for charging issues in matrix data (excluding exceptions)
+                                                    $isUndercharging = false;
+                                                    $isOvercharging = false;
+                                                    $totalQuantityDiff = 0;
 
-                                        <?php
-                                        // Check for charging issues in matrix data
-                                        $isUndercharging = false;
-                                        $isOvercharging = false;
-                                        $totalQuantityDiff = 0;
+                                                    if ($hasMatrix) {
+                                                        foreach ($client['matrix'] as $matrixItem) {
+                                                            // Skip items with exceptions - they are approved mismatches
+                                                            if (!empty($matrixItem['has_exception'])) {
+                                                                continue;
+                                                            }
 
-                                        if ($hasMatrix) {
-                                            foreach ($client['matrix'] as $matrixItem) {
-                                                $productQty = (int) ($matrixItem['product_qty'] ?? 0);
-                                                $subQty = (int) ($matrixItem['sub_qty'] ?? 0);
+                                                            $productQty = (int) ($matrixItem['product_qty'] ?? 0);
+                                                            $subQty = (int) ($matrixItem['sub_qty'] ?? 0);
 
-                                                if ($productQty !== $subQty) {
-                                                    $difference = $subQty - $productQty;
-                                                    $totalQuantityDiff += $difference;
+                                                            if ($productQty !== $subQty) {
+                                                                $difference = $subQty - $productQty;
+                                                                $totalQuantityDiff += $difference;
 
-                                                    if ($difference > 0) {
-                                                        $isUndercharging = true;
-                                                    } else {
-                                                        $isOvercharging = true;
+                                                                if ($difference > 0) {
+                                                                    $isUndercharging = true;
+                                                                } else {
+                                                                    $isOvercharging = true;
+                                                                }
+                                                            }
+                                                        }
                                                     }
-                                                }
-                                            }
-                                        }
 
-                                        // Display charging status pill
-                                        if ($isUndercharging && $isOvercharging): ?>
+                                                    // Display charging status pill
+                                                    if ($isUndercharging && $isOvercharging): ?>
                                             <span
                                                 class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
                                                 Mixed Billing

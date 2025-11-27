@@ -1,16 +1,40 @@
 // O365 Sync Dashboard - Main JavaScript Application
 
 // Exception Management
-function addException(clientId, msc, whmcsQty, dickerQty, reason, applyTo = 'client', subscriptionId = '') {
+function addException(clientId, msc, whmcsQty, dickerQty, contextInfo, applyTo = 'client', subscriptionId = '', productId = null) {
+    // Prompt user for reason
+    const reason = prompt('Enter reason for exception:\n\nContext: ' + contextInfo, '');
+    
+    if (reason === null || reason.trim() === '') {
+        alert('Exception not added - reason is required');
+        return;
+    }
+
     const formData = new URLSearchParams({
         action: 'add_exception',
         client_id: clientId,
         manufacturer_stock_code: msc,
         expected_whmcs_qty: whmcsQty,
         expected_dicker_qty: dickerQty,
-        reason: reason,
+        reason: reason.trim(),
         apply_to: applyTo,
         subscription_id: subscriptionId
+    });    // Add product_id if provided (must be a number, not string 'null')
+    if (productId !== null && productId !== 'null' && productId !== '') {
+        formData.append('product_id', productId);
+        console.log('Adding product_id to exception:', productId);
+    } else {
+        console.log('Skipping product_id (value is null/empty):', productId);
+    }
+
+    console.log('Exception form data:', {
+        client_id: clientId,
+        product_id: productId,
+        msc: msc,
+        whmcs_qty: whmcsQty,
+        dicker_qty: dickerQty,
+        reason: reason.trim(),
+        apply_to: applyTo
     });
 
     return fetch(window.location.pathname, {

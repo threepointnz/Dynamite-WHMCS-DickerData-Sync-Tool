@@ -47,121 +47,85 @@ class Report
                 }
             }
         }
-    }
-
-    /**
-     * Load exceptions.json file
-     * Format: [
-     *   {
-     *     "client_id": 123,
-     *     "expected_whmcs_qty": 8,
-     *     "expected_dicker_qty": 4,
-     *     "reason": "Client has special discount arrangement",
-     *     "manufacturer_stock_code": "p1y:cfq7ttc0lh16:0001:1:",
-     *     "product_id": 456,
-     *     "apply_to": "client", // or "unmatched"
-     *     "created_at": "2025-11-27",
-     *   }
-     * ]
-     */
+    }    /**
+         * Load exceptions.json file
+         * 
+         * Simple flat array structure with product_id tracking:
+         * [
+         *   {
+         *     "client_id": 123,           // null or 0 = global exception
+         *     "product_id": 456,          // null = unmatched subscription
+         *     "manufacturer_stock_code": "p1y:cfq7ttc0lh16:0001:1:",
+         *     "expected_whmcs_qty": 8,
+         *     "expected_dicker_qty": 4,
+         *     "reason": "Client has special discount arrangement",
+         *     "apply_to": "client",       // informational only
+         *     "subscription_id": null,    // for unmatched subscriptions
+         *     "created_at": "2025-11-27",
+         *     "created_by": "system"
+         *   }
+         * ]
+         */
     private function loadExceptions()
     {
         $exceptionsPath = __DIR__ . '/../exceptions.json';
-        $this->exceptions = [
-            'client' => [],        // client_id => msc => exception (per-client)
-            'global' => [],        // msc => exception (apply to any client)
-            'unmatched_by_sub' => [] // subscription_reference => exception
-        ];
+        $this->exceptions = []; // Simple flat array
 
         if (file_exists($exceptionsPath) && is_readable($exceptionsPath)) {
             $content = @file_get_contents($exceptionsPath);
             if ($content !== false) {
                 $decoded = json_decode($content, true);
                 if (is_array($decoded)) {
-                    // decoded may be an associative array keyed by numeric index or a plain list
-                    foreach ($decoded as $exception) {
-                        if (!is_array($exception))
-                            continue;
-
-                        $clientId = (int) ($exception['client_id'] ?? 0);
-                        $msc = strtolower(trim($exception['manufacturer_stock_code'] ?? ''));
-                        $applyTo = $exception['apply_to'] ?? 'client';
-                        $subId = $exception['subscription_id'] ?? null;
-
-                        if ($msc === '')
-                            continue;
-
-                        if ($applyTo === 'unmatched') {
-                            // If we have a subscription id/reference, index by that too
-                            if (!empty($subId)) {
-                                $this->exceptions['unmatched_by_sub'][(string) $subId] = $exception;
-                            }
-
-                            // Also register as a global MSC-level unmatched exception
-                            $this->exceptions['global'][$msc] = $exception;
-                        } else {
-                            // client-scoped
-                            if ($clientId > 0) {
-                                if (!isset($this->exceptions['client'][$clientId])) {
-                                    $this->exceptions['client'][$clientId] = [];
-                                }
-                                $this->exceptions['client'][$clientId][$msc] = $exception;
-                            } else {
-                                // client_id == 0 treat as global exception too
-                                $this->exceptions['global'][$msc] = $exception;
-                            }
-                        }
-                    }
+                    $this->exceptions = $decoded;
                 }
             }
         }
-    }
-
-    /**
-     * Check if a quantity mismatch matches an exception rule
-     * 
-     * @param int $clientId
-     * @param string $msc Manufacturer stock code
-     * @param int $whmcsQty
-     * @param int $dickerQty
-     * @return array|false Returns exception data if matched, false otherwise
-     */
-    private function checkException($clientId, $msc, $whmcsQty, $dickerQty)
+    }    /**
+         * Check if a quantity mismatch matches an exception rule
+         * 
+         * Simplified linear search through flat exception array:
+         * - Match MSC (manufacturer stock code)
+         * - Match client_id if exception has one (null/0 = global)
+         * - Match product_id if exception has one (for specificity)
+         * - Match quantities exactly
+         * 
+         * @param int $clientId
+         * @param int|null $productId
+         * @param string $msc Manufacturer stock code
+         * @param int $whmcsQty
+         * @param int $dickerQty
+         * @return array|false Returns exception data if matched, false otherwise
+         */
+    private function checkException($clientId, $productId, $msc, $whmcsQty, $dickerQty)
     {
         $msc = strtolower(trim($msc));
 
-        // Temporary debug storage
-        static $debugInfo = [];
-
-        // 1) check client-scoped exception
-        if (isset($this->exceptions['client'][$clientId][$msc])) {
-            $exception = $this->exceptions['client'][$clientId][$msc];
-            $expectedWhmcs = (int) ($exception['expected_whmcs_qty'] ?? 0);
-            $expectedDicker = (int) ($exception['expected_dicker_qty'] ?? 0);
-
-            if ($whmcsQty === $expectedWhmcs && $dickerQty === $expectedDicker) {
-                return $exception;
-            } else {
-                // Store debug info for non-matching exceptions
-                $debugInfo[] = [
-                    'client_id' => $clientId,
-                    'msc' => $msc,
-                    'actual_whmcs' => $whmcsQty,
-                    'actual_dicker' => $dickerQty,
-                    'expected_whmcs' => $expectedWhmcs,
-                    'expected_dicker' => $expectedDicker,
-                    'reason' => $exception['reason'] ?? ''
-                ];
-                // Store in a global so we can access it later
-                $GLOBALS['exception_debug_info'] = $debugInfo;
+        foreach ($this->exceptions as $exception) {
+            if (!is_array($exception)) {
+                continue;
             }
-        }
 
-        // 2) check global MSC-scoped exception
-        if (isset($this->exceptions['global'][$msc])) {
-            $exception = $this->exceptions['global'][$msc];
+            // Match MSC
+            $exceptionMsc = strtolower(trim($exception['manufacturer_stock_code'] ?? ''));
+            if ($exceptionMsc !== $msc) {
+                continue;
+            }
+
+            // Check if exception is for a specific client
+            $exceptionClientId = (int) ($exception['client_id'] ?? 0);
+            if ($exceptionClientId > 0 && $exceptionClientId !== $clientId) {
+                continue; // Exception is for a different client
+            }
+
+            // Check if exception is for a specific product (more specific matching)
+            $exceptionProductId = isset($exception['product_id']) ? (int) $exception['product_id'] : null;
+            if ($exceptionProductId !== null && $productId !== null && $exceptionProductId !== $productId) {
+                continue; // Exception is for a different product
+            }            // Check quantities - cast to int to handle float/int type mismatches from round()
             $expectedWhmcs = (int) ($exception['expected_whmcs_qty'] ?? 0);
             $expectedDicker = (int) ($exception['expected_dicker_qty'] ?? 0);
+            $whmcsQty = (int) $whmcsQty;
+            $dickerQty = (int) $dickerQty;
 
             if ($whmcsQty === $expectedWhmcs && $dickerQty === $expectedDicker) {
                 return $exception;
@@ -173,36 +137,55 @@ class Report
 
     /**
      * Check if an unmatched subscription has an applicable exception
+     *
+     * Simplified linear search:
+     * - Match MSC or subscription_id
+     * - Match client_id if exception has one
+     * - Match expected_dicker_qty
+     * 
+     * @param int $clientId
+     * @param string $subscriptionReference
+     * @param string $msc Manufacturer stock code
+     * @param int $quantity
+     * @return array|false Returns exception data if matched, false otherwise
      */
     private function checkUnmatchedException($clientId, $subscriptionReference, $msc, $quantity)
     {
         $msc = strtolower(trim($msc));
 
-        // 1) direct subscription id match
-        if (!empty($subscriptionReference) && isset($this->exceptions['unmatched_by_sub'][(string) $subscriptionReference])) {
-            $exception = $this->exceptions['unmatched_by_sub'][(string) $subscriptionReference];
-            $expectedDicker = (int) ($exception['expected_dicker_qty'] ?? 0);
-            if ($quantity === $expectedDicker) {
-                return $exception;
+        foreach ($this->exceptions as $exception) {
+            if (!is_array($exception)) {
+                continue;
             }
-        }
 
-        // 2) global MSC-level unmatched exception
-        if (isset($this->exceptions['global'][$msc])) {
-            $exception = $this->exceptions['global'][$msc];
+            // For unmatched subscriptions, we look for:
+            // 1. Exact subscription_id match (highest priority)
+            // 2. MSC match with matching client_id (or global)
+
+            $exceptionSubId = $exception['subscription_id'] ?? null;
+            $exceptionMsc = strtolower(trim($exception['manufacturer_stock_code'] ?? ''));
+            $exceptionClientId = (int) ($exception['client_id'] ?? 0);
             $expectedDicker = (int) ($exception['expected_dicker_qty'] ?? 0);
-            // if expected_dicker_qty matches subscription quantity, treat as exception
-            if ($expectedDicker === $quantity) {
-                return $exception;
+
+            // Check quantity first - if it doesn't match, skip
+            if ($expectedDicker !== $quantity) {
+                continue;
             }
-        }
 
-        // 3) client-scoped exception could also apply if client has an explicit exception for this MSC
-        if (isset($this->exceptions['client'][$clientId][$msc])) {
-            $exception = $this->exceptions['client'][$clientId][$msc];
-            $expectedDicker = (int) ($exception['expected_dicker_qty'] ?? 0);
-            if ($expectedDicker === $quantity) {
-                return $exception;
+            // Priority 1: Exact subscription reference match
+            if (!empty($subscriptionReference) && !empty($exceptionSubId) && (string) $exceptionSubId === (string) $subscriptionReference) {
+                // Client match check
+                if ($exceptionClientId === 0 || $exceptionClientId === $clientId) {
+                    return $exception;
+                }
+            }
+
+            // Priority 2: MSC match
+            if ($exceptionMsc === $msc) {
+                // Client match check
+                if ($exceptionClientId === 0 || $exceptionClientId === $clientId) {
+                    return $exception;
+                }
             }
         }
 
@@ -222,6 +205,8 @@ class Report
             'undercharging' => [],
             'overcharging' => [],
         ];
+
+        // process the 
         return $data;
     }
 
@@ -253,6 +238,21 @@ class Report
                     'tenantID' => $row['field16_value'],
                     'products' => [],
                     'subscriptions' => $this->findMatchingSubscriptions($row['field16_value'], $this->dicker_data),
+                    'exceptions_applied' => (function () use ($cid) {
+                        $clientExceptions = [];
+                        if (is_array($this->exceptions)) {
+                            foreach ($this->exceptions as $ex) {
+                                if (!is_array($ex)) {
+                                    continue;
+                                }
+                                $exClient = (int) ($ex['client_id'] ?? 0);
+                                if ($exClient === 0 || $exClient === $cid) {
+                                    $clientExceptions[] = $ex;
+                                }
+                            }
+                        }
+                        return $clientExceptions;
+                    })(),
                 ];
             }
 
@@ -260,13 +260,13 @@ class Report
             if (strpos($row['product_name'], '365') !== false || strpos($row['product_name'], 'Exchange') !== false) {
                 $results[$cid]['estimated_365_count'] = (int) $results[$cid]['estimated_365_count'] + (int) $row['product_qty'];
             }
-
             if (!isset($results[$cid]['products'][$pid])) {
                 $results[$cid]['products'][$pid] = [
                     'product_id' => $pid,
                     'product_name' => $row['product_name'],
                     'qty' => (int) $row['product_qty'],
                     'likely_365' => (strpos($row['product_name'], '365') !== false || strpos($row['product_name'], 'Exchange') !== false) ? true : false,
+                    'has_exceptions' => false, // Will be set later during matrix processing
                 ];
             } else {
                 $results[$cid]['products'][$pid]['qty'] += (int) $row['product_qty'];
@@ -274,6 +274,16 @@ class Report
         }
         //return $results;
         return $this->buildSubscriptionNameMatrix($results);
+    }
+
+    public function findExceptionByKeyValue($array, $key, $value)
+    {
+        foreach ($array as $item) {
+            if (is_array($item) && isset($item[$key]) && $item[$key] == $value) {
+                return $item;
+            }
+        }
+        return null;
     }
     /**
      * Build a lookup table from mapping.json for fast product->dicker matching
@@ -351,7 +361,6 @@ class Report
                 // If we found matching subscriptions, create matrix entries
                 if (!empty($matchedSubsByMSC)) {
                     $totalSubQty = array_sum(array_column($matchedSubsByMSC, 'sub_qty'));
-
                     foreach ($matchedSubsByMSC as $msc => $subData) {
                         // Calculate proportional product quantity for this subscription
                         if ($totalSubQty > 0) {
@@ -360,7 +369,18 @@ class Report
                             $proportionalProductQty = 0;
                         }
 
-                        $results[$cid]['matrix'][] = [
+                        // Check for exception RIGHT HERE when building the matrix
+                        $exception = $this->checkException(
+                            $client['id'],
+                            $productId,
+                            $subData['subscription']['ManufacturerStockCode'] ?? '',
+                            $proportionalProductQty,
+                            $subData['sub_qty']
+                        );
+
+                        $matrixEntry = [
+                            'client_id' => $client['id'],
+                            'product_id' => $productId,
                             'subscription_reference' => $subData['subscription']['SubscriptionReference'] ?? '',
                             'stock_description' => $subData['subscription']['StockDescription'] ?? '',
                             'manufacturer_stock_code' => $subData['subscription']['ManufacturerStockCode'] ?? '',
@@ -368,7 +388,22 @@ class Report
                             'matched_via' => 'mapping.json',
                             'product_qty' => $proportionalProductQty,
                             'sub_qty' => $subData['sub_qty'],
+                            'has_exception' => ($exception !== false),
                         ];
+
+                        // Add exception details if matched
+                        if ($exception !== false) {
+                            $matrixEntry['exception_reason'] = $exception['reason'] ?? 'No reason provided';
+                            $matrixEntry['exception_created_at'] = $exception['created_at'] ?? '';
+                            $matrixEntry['exception_created_by'] = $exception['created_by'] ?? '';
+
+                            // Mark product as having active exceptions
+                            if (isset($results[$cid]['products'][$productId])) {
+                                $results[$cid]['products'][$productId]['has_exceptions'] = true;
+                            }
+                        }
+
+                        $results[$cid]['matrix'][] = $matrixEntry;
                     }
                 } else {
                     // Product has no matching subscriptions in Dicker
@@ -400,47 +435,40 @@ class Report
         $unmatchedReport = [];
         $exceptionsApplied = [];
 
-        // Loop through matrix and generate discrepancy report based on the product_qty and sub_qty for each entry
+        // Loop through matrix and generate discrepancy report
         foreach ($results as $clientIndex => $client) {
             // Check for quantity mismatches in matched subscriptions
             if (isset($client['matrix'])) {
                 foreach ($client['matrix'] as $entry) {
+                    $clientId = $client['id'];
+
+                    // If has_exception is already set to true, record it
+                    if (!empty($entry['has_exception'])) {
+                        $exceptionsApplied[] = [
+                            'client_id' => $clientId,
+                            'companyname' => $client['companyname'],
+                            'subscription_reference' => $entry['subscription_reference'],
+                            'stock_description' => $entry['stock_description'],
+                            'manufacturer_stock_code' => $entry['manufacturer_stock_code'] ?? '',
+                            'product_name' => $entry['matched_product_name'],
+                            'product_qty' => $entry['product_qty'],
+                            'sub_qty' => $entry['sub_qty'],
+                            'difference' => $entry['sub_qty'] - $entry['product_qty'],
+                            'exception_reason' => $entry['exception_reason'] ?? 'No reason provided',
+                            'exception_created_at' => $entry['exception_created_at'] ?? '',
+                            'exception_created_by' => $entry['exception_created_by'] ?? ''
+                        ];
+                        continue; // Skip adding to discrepancy report
+                    }
+
+                    // If quantities don't match and no exception, add to discrepancy report
                     if ($entry['product_qty'] != $entry['sub_qty']) {
-                        $msc = $entry['manufacturer_stock_code'] ?? '';
-                        $clientId = $client['id'];                        // Check if this mismatch has an exception
-                        $exception = $this->checkException(
-                            $clientId,
-                            $msc,
-                            $entry['product_qty'],
-                            $entry['sub_qty']
-                        );
-
-                        if ($exception !== false) {
-                            // Exception matched - record it but don't report as issue
-                            $exceptionsApplied[] = [
-                                'client_id' => $clientId,
-                                'companyname' => $client['companyname'],
-                                'subscription_reference' => $entry['subscription_reference'],
-                                'stock_description' => $entry['stock_description'],
-                                'manufacturer_stock_code' => $msc,
-                                'product_name' => $entry['matched_product_name'],
-                                'product_qty' => $entry['product_qty'],
-                                'sub_qty' => $entry['sub_qty'],
-                                'difference' => $entry['sub_qty'] - $entry['product_qty'],
-                                'exception_reason' => $exception['reason'] ?? 'No reason provided',
-                                'exception_created_at' => $exception['created_at'] ?? '',
-                                'exception_created_by' => $exception['created_by'] ?? ''
-                            ];
-                            continue; // Skip adding to discrepancy report
-                        }
-
-                        // No exception - add to discrepancy report
                         $report[] = [
                             'client_id' => $clientId,
                             'companyname' => $client['companyname'],
                             'subscription_reference' => $entry['subscription_reference'],
                             'stock_description' => $entry['stock_description'],
-                            'manufacturer_stock_code' => $msc,
+                            'manufacturer_stock_code' => $entry['manufacturer_stock_code'] ?? '',
                             'product_name' => $entry['matched_product_name'],
                             'product_qty' => $entry['product_qty'],
                             'sub_qty' => $entry['sub_qty'],

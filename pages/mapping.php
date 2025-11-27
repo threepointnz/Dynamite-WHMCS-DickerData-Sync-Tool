@@ -164,8 +164,8 @@
         <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
         <?php
-        if ($_GET['debug']) {
-            monacoEditor(json_decode($mappingContent, true), 'mappingContent');
+        if (isset($_GET['debug'])) {
+            monacoEditor($mappingContent, 'mappingContent');
         }
         ?>
     </div>
