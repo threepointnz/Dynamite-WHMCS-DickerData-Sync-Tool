@@ -165,7 +165,7 @@
 
         <?php
         if (isset($_GET['debug'])) {
-            monacoEditor($mappingContent, 'mappingContent');
+            monacoEditor(json_decode($mappingContent, true), 'mappingContent');
         }
         ?>
     </div>

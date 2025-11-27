@@ -188,9 +188,39 @@ class Report
                 }
             }
         }
+        return false;
+    }
+
+    /**
+     * Check if a client has an exception for missing tenant ID or expiry date
+     * 
+     * @param int $clientId
+     * @param string $exceptionType Either 'missing_tenant_id' or 'missing_expiry'
+     * @return array|false Returns exception data if matched, false otherwise
+     */
+    private function checkClientException($clientId, $exceptionType)
+    {
+        foreach ($this->exceptions as $exception) {
+            if (!is_array($exception)) {
+                continue;
+            }
+
+            // Check if this is a client-level exception
+            $type = $exception['type'] ?? 'quantity_mismatch'; // Default for backward compatibility
+            if ($type !== $exceptionType) {
+                continue;
+            }
+
+            // Match client ID
+            $exceptionClientId = (int) ($exception['client_id'] ?? 0);
+            if ($exceptionClientId === $clientId) {
+                return $exception;
+            }
+        }
 
         return false;
     }
+
     public function generate()
     {
         $matched = $this->matchSubscriptions();
@@ -209,10 +239,74 @@ class Report
         // process the 
         return $data;
     }
-
     public function getExceptions()
     {
         return $this->exceptions;
+    }    /**
+         * Filter problematic clients based on client-level exceptions
+         * 
+         * @param array $problematicClients Array of clients from WHMCS::getProblematicClients()
+         * @return array Filtered array with exceptions applied
+         */
+    public function filterProblematicClients($problematicClients)
+    {
+        $filtered = [];
+        $exceptionsApplied = [];
+
+        foreach ($problematicClients as $client) {
+            $clientId = (int) ($client['id'] ?? 0);
+            $hasTenantId = !empty($client['tenantId']) && $client['tenantId'] != 0;
+            $hasExpiry = !empty($client['expiry']) && $client['expiry'] != 0;
+
+            // Check for missing tenant ID exception
+            if (!$hasTenantId) {
+                $tenantException = $this->checkClientException($clientId, 'missing_tenant_id');
+                if ($tenantException !== false) {
+                    $exceptionsApplied[] = [
+                        'client_id' => $clientId,
+                        'companyname' => $client['companyname'] ?? 'Unknown',
+                        'type' => 'missing_tenant_id',
+                        'reason' => $tenantException['reason'] ?? 'No reason provided',
+                        'created_at' => $tenantException['created_at'] ?? '',
+                        'created_by' => $tenantException['created_by'] ?? ''
+                    ];
+                    // Mark as having exception so we can skip it
+                    $client['has_tenant_exception'] = true;
+                    $client['tenant_exception_reason'] = $tenantException['reason'] ?? 'No reason provided';
+                }
+            }
+
+            // Check for missing expiry exception
+            if (!$hasExpiry) {
+                $expiryException = $this->checkClientException($clientId, 'missing_expiry');
+                if ($expiryException !== false) {
+                    $exceptionsApplied[] = [
+                        'client_id' => $clientId,
+                        'companyname' => $client['companyname'] ?? 'Unknown',
+                        'type' => 'missing_expiry',
+                        'reason' => $expiryException['reason'] ?? 'No reason provided',
+                        'created_at' => $expiryException['created_at'] ?? '',
+                        'created_by' => $expiryException['created_by'] ?? ''
+                    ];
+                    // Mark as having exception
+                    $client['has_expiry_exception'] = true;
+                    $client['expiry_exception_reason'] = $expiryException['reason'] ?? 'No reason provided';
+                }
+            }
+
+            // Only include client if they still have issues without exceptions
+            if (
+                (!$hasTenantId && empty($client['has_tenant_exception'])) ||
+                (!$hasExpiry && empty($client['has_expiry_exception']))
+            ) {
+                $filtered[] = $client;
+            }
+        }
+
+        return [
+            'filtered' => $filtered,
+            'exceptions_applied' => $exceptionsApplied
+        ];
     }
 
     /**

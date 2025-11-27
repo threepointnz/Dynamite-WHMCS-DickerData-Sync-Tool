@@ -158,4 +158,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         echo json_encode(['success' => true]);
         exit;
     }
+
+    // Handle client-level exceptions (missing tenant ID / expiry)
+    if ($_POST['action'] === 'add_client_exception') {
+        $exceptionsPath = __DIR__ . '/../exceptions.json';
+        $exceptions = [];
+
+        if (file_exists($exceptionsPath)) {
+            $content = file_get_contents($exceptionsPath);
+            $exceptions = json_decode($content, true) ?: [];
+        }
+
+        $clientId = isset($_POST['client_id']) && $_POST['client_id'] !== '' ? (int) $_POST['client_id'] : 0;
+        $exceptionType = trim($_POST['exception_type'] ?? ''); // 'missing_tenant_id' or 'missing_expiry'
+        $reason = trim($_POST['reason'] ?? '');
+
+        if ($clientId === 0 || !in_array($exceptionType, ['missing_tenant_id', 'missing_expiry'])) {
+            echo json_encode(['success' => false, 'error' => 'Invalid parameters']);
+            exit;
+        }
+
+        // Check if exception already exists
+        $exists = false;
+        foreach ($exceptions as $exc) {
+            $excType = $exc['type'] ?? 'quantity_mismatch';
+            $excClient = (int) ($exc['client_id'] ?? 0);
+            
+            if ($excType === $exceptionType && $excClient === $clientId) {
+                $exists = true;
+                break;
+            }
+        }
+
+        if (!$exists) {
+            $newException = [
+                'type' => $exceptionType,
+                'client_id' => $clientId,
+                'product_id' => null,
+                'manufacturer_stock_code' => null,
+                'expected_whmcs_qty' => null,
+                'expected_dicker_qty' => null,
+                'reason' => $reason,
+                'apply_to' => 'client',
+                'subscription_id' => null,
+                'created_at' => date('Y-m-d H:i:s'),
+                'created_by' => $_SESSION['adminid'] ?? 'system'
+            ];
+
+            $exceptions[] = $newException;
+            file_put_contents($exceptionsPath, json_encode($exceptions, JSON_PRETTY_PRINT));
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Exception already exists']);
+        }
+        exit;
+    }
+
+    if ($_POST['action'] === 'remove_client_exception') {
+        $exceptionsPath = __DIR__ . '/../exceptions.json';
+        $exceptions = [];
+
+        if (file_exists($exceptionsPath)) {
+            $content = file_get_contents($exceptionsPath);
+            $exceptions = json_decode($content, true) ?: [];
+        }
+
+        $clientId = isset($_POST['client_id']) && $_POST['client_id'] !== '' ? (int) $_POST['client_id'] : 0;
+        $exceptionType = trim($_POST['exception_type'] ?? '');
+
+        $exceptions = array_filter($exceptions, function ($exc) use ($clientId, $exceptionType) {
+            $excType = $exc['type'] ?? 'quantity_mismatch';
+            $excClient = (int) ($exc['client_id'] ?? 0);
+            
+            // Remove if both type and client_id match
+            if ($excType === $exceptionType && $excClient === $clientId) {
+                return false;
+            }
+            return true;
+        });
+
+        $exceptions = array_values($exceptions);
+        file_put_contents($exceptionsPath, json_encode($exceptions, JSON_PRETTY_PRINT));
+        echo json_encode(['success' => true]);
+        exit;
+    }
 }

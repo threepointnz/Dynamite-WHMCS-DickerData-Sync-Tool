@@ -81,6 +81,71 @@ function removeException(clientId, msc, subscriptionId = '') {
             } else {
                 alert('Failed to remove exception');
             }
+        })        .catch(err => {
+            alert('Network error: ' + err.message);
+        });
+}
+
+// Client-level Exception Management (for missing tenant ID / expiry)
+function addClientException(clientId, exceptionType, companyName) {
+    const typeLabel = exceptionType === 'missing_tenant_id' ? 'Missing Tenant ID' : 'Missing Expiry Date';
+    const reason = prompt(`Add exception for: ${companyName}\nType: ${typeLabel}\n\nEnter reason:`, '');
+    
+    if (reason === null || reason.trim() === '') {
+        alert('Exception not added - reason is required');
+        return;
+    }
+
+    const formData = new URLSearchParams({
+        action: 'add_client_exception',
+        client_id: clientId,
+        exception_type: exceptionType,
+        reason: reason.trim()
+    });
+
+    return fetch(window.location.pathname, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData
+    })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                alert('Client exception added successfully');
+                location.reload();
+            } else {
+                alert('Failed to add exception: ' + (res.error || 'Unknown error'));
+            }
+        })
+        .catch(err => {
+            alert('Network error: ' + err.message);
+        });
+}
+
+function removeClientException(clientId, exceptionType) {
+    if (!confirm('Are you sure you want to remove this exception?')) {
+        return;
+    }
+
+    const formData = new URLSearchParams({
+        action: 'remove_client_exception',
+        client_id: clientId,
+        exception_type: exceptionType
+    });
+
+    return fetch(window.location.pathname, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData
+    })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                alert('Client exception removed successfully');
+                location.reload();
+            } else {
+                alert('Failed to remove exception');
+            }
         })
         .catch(err => {
             alert('Network error: ' + err.message);

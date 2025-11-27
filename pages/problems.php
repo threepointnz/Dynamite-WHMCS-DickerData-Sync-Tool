@@ -28,6 +28,9 @@
                     <th
                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Tenant</th>
+                    <th
+                        class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Actions</th>
                 </tr>
             </thead>
             <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200">
@@ -63,6 +66,22 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                             <?php echo $tenantBadge; ?>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+                            <?php if (!$expiryOk): ?>
+                                <button
+                                    onclick="addClientException(<?php echo $clientId; ?>, 'missing_expiry', '<?php echo htmlspecialchars($company, ENT_QUOTES); ?>')"
+                                    class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xs mr-2">
+                                    Add Expiry Exception
+                                </button>
+                            <?php endif; ?>
+                            <?php if (!$tenantOk): ?>
+                                <button
+                                    onclick="addClientException(<?php echo $clientId; ?>, 'missing_tenant_id', '<?php echo htmlspecialchars($company, ENT_QUOTES); ?>')"
+                                    class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xs">
+                                    Add Tenant Exception
+                                </button>
+                            <?php endif; ?>
                         </td>
                     </tr>
                 <?php endforeach; ?>

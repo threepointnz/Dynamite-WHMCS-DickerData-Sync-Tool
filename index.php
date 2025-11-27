@@ -92,6 +92,11 @@ $mappingContent = json_encode($mappingContent, JSON_PRETTY_PRINT | JSON_UNESCAPE
 $report_ = new Report($whmcs_data, $dicker_data);
 $report = $report_->generate();
 
+// Filter problematic clients based on exceptions
+$problematicClientsFiltered = $report_->filterProblematicClients($problems);
+$problems = $problematicClientsFiltered['filtered'];
+$clientExceptionsApplied = $problematicClientsFiltered['exceptions_applied'];
+
 // Handle cron mode (JSON output only)
 if (isset($_GET['cron']) && $_GET['cron'] === '1') {
     $response = [];
