@@ -99,20 +99,38 @@ $clientExceptionsApplied = $problematicClientsFiltered['exceptions_applied'];
 
 // Handle cron mode (JSON output only)
 if (isset($_GET['cron']) && $_GET['cron'] === '1') {
-    $response = [];
     $emailer = new Mail();
 
-    $formattedProblems = array_map(function ($item) {
-        $item['tenantId'] = $item['tenantId'] ? 'set' : 'missing';
-        $item['expiry'] = $item['expiry'] ? 'set' : 'missing';
-        return $item;
-    }, $problems);
-    $emailMessage = '';
-    $emailMessage .= $emailer->arrayToTemplate($formattedProblems, "{companyname} (#{id})\nExpiry - {expiry}\nTenant ID: {tenantId}\n----\r", "WHMCS Custom Field Problems");
-    $emailMessage .= $emailer->arrayToTemplate($whmcs_data['discrepancy_report'], "{companyname} (#{client_id})\n{state} - {product_name}\nWHMCS Qty: {product_qty}, Dicker Qty: {sub_qty}\n----\r", "O365 Client Discrepancies");
+    // Count total issues (already filtered by exceptions)
+    // Use defensive checks to handle missing keys
+    $discrepancies = $report['discrepancy_report'] ?? [];
+    $unmatchedSubs = $report['unmatched_subscriptions_report'] ?? [];
+    $exceptionsApplied = $report['exceptions_applied'] ?? [];
 
-    if (!empty($emailMessage)) {
-        $response = $emailer->send($_ENV['MAIL_TO'], $_ENV['MAIL_SUBJECT'], $emailMessage);
+    $totalIssues = count($problems) + count($discrepancies) + count($unmatchedSubs);
+
+    // Check if we should send email (configurable)
+    $onlySendIfIssues = filter_var($_ENV['MAIL_ONLY_SEND_IF_ISSUES'] ?? 'true', FILTER_VALIDATE_BOOLEAN);
+    $shouldSend = $totalIssues > 0 || !$onlySendIfIssues;
+
+    $response = ['sent' => false, 'issues_found' => $totalIssues];
+
+    if ($shouldSend) {
+        // Generate comprehensive email report
+        $emailContent = $emailer->generateDailyReport(
+            $problems,                  // Filtered problematic clients
+            $discrepancies,             // Filtered quantity mismatches
+            $unmatchedSubs,             // Filtered unmatched subscriptions
+            $exceptionsApplied,         // Quantity/subscription exceptions
+            $clientExceptionsApplied    // Client-level exceptions
+        );
+
+        if (!empty($emailContent)) {
+            $mailResult = $emailer->send($_ENV['MAIL_TO'], $_ENV['MAIL_SUBJECT'], $emailContent);
+            $response = array_merge($response, (array) $mailResult);
+        }
+    } else {
+        $response['message'] = 'No issues found - email not sent';
     }
 
     header('Content-Type: application/json');

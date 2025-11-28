@@ -17,6 +17,220 @@ class Mail
         ];
     }
 
+    /**
+     * Generate comprehensive daily report email
+     * 
+     * @param array $problematicClients Clients with missing tenant ID or expiry (already filtered)
+     * @param array $discrepancies Quantity mismatches (already filtered)
+     * @param array $unmatchedSubscriptions Unmatched subscriptions (already filtered)
+     * @param array $quantityExceptions Applied quantity/subscription exceptions
+     * @param array $clientExceptions Applied client-level exceptions
+     * @return string Formatted email content
+     */
+    public function generateDailyReport($problematicClients, $discrepancies, $unmatchedSubscriptions, $quantityExceptions = [], $clientExceptions = [])
+    {
+        // Defensive checks - ensure all params are arrays
+        $problematicClients = is_array($problematicClients) ? $problematicClients : [];
+        $discrepancies = is_array($discrepancies) ? $discrepancies : [];
+        $unmatchedSubscriptions = is_array($unmatchedSubscriptions) ? $unmatchedSubscriptions : [];
+        $quantityExceptions = is_array($quantityExceptions) ? $quantityExceptions : [];
+        $clientExceptions = is_array($clientExceptions) ? $clientExceptions : [];
+
+        // Calculate statistics
+        $totalProblematic = count($problematicClients);
+        $totalDiscrepancies = count($discrepancies);
+        $totalUnmatched = count($unmatchedSubscriptions);
+        $totalIssues = $totalProblematic + $totalDiscrepancies + $totalUnmatched;
+
+        // Separate over/undercharging
+        $overcharging = array_filter($discrepancies, function ($item) {
+            return ($item['product_qty'] ?? 0) > ($item['sub_qty'] ?? 0);
+        });
+        $undercharging = array_filter($discrepancies, function ($item) {
+            return ($item['product_qty'] ?? 0) < ($item['sub_qty'] ?? 0);
+        });
+
+        // Count exceptions
+        $totalExceptions = count($quantityExceptions) + count($clientExceptions);
+        $includeExceptions = filter_var($_ENV['MAIL_INCLUDE_EXCEPTIONS'] ?? 'false', FILTER_VALIDATE_BOOLEAN);
+
+        // Build email
+        $divider = str_repeat('=', 70);
+        $minorDivider = str_repeat('-', 70);
+
+        $email = $divider . "\n";
+        $email .= "O365 SYNC DASHBOARD - DAILY REPORT\n";
+        $email .= $divider . "\n\n";
+
+        // SUMMARY SECTION
+        $email .= "📊 SUMMARY\n";
+        $email .= $minorDivider . "\n";
+        $email .= "Total Issues Found: " . $totalIssues . "\n";
+
+        if ($totalIssues > 0) {
+            if ($totalProblematic > 0) {
+                $email .= "  • Problematic Clients: " . $totalProblematic . " (missing tenant ID/expiry)\n";
+            }
+            if ($totalDiscrepancies > 0) {
+                $email .= "  • Quantity Mismatches: " . $totalDiscrepancies . " (";
+                $parts = [];
+                if (count($overcharging) > 0)
+                    $parts[] = count($overcharging) . " overcharging";
+                if (count($undercharging) > 0)
+                    $parts[] = count($undercharging) . " undercharging";
+                $email .= implode(', ', $parts) . ")\n";
+            }
+            if ($totalUnmatched > 0) {
+                $email .= "  • Unmatched Subscriptions: " . $totalUnmatched . " (no WHMCS product mapped)\n";
+            }
+        } else {
+            $email .= "✅ No issues found - all clients are properly configured!\n";
+        }
+
+        if ($totalExceptions > 0) {
+            $email .= "\nExceptions Applied: " . $totalExceptions . " (filtered from this report)\n";
+        }
+
+        $email .= "\n";
+
+        // Return early if no issues
+        if ($totalIssues === 0) {
+            $email .= "Report generated: " . date('Y-m-d H:i:s') . "\n";
+            return $email;
+        }
+
+        // CRITICAL ISSUES SECTION
+        $email .= "🔴 CRITICAL ISSUES\n";
+        $email .= $divider . "\n\n";
+
+        // 1. PROBLEMATIC CLIENTS
+        if ($totalProblematic > 0) {
+            $email .= "1. PROBLEMATIC CLIENTS (" . $totalProblematic . ")\n";
+            $email .= $minorDivider . "\n";
+
+            foreach ($problematicClients as $client) {
+                $company = $client['companyname'] ?? 'Unknown';
+                $clientId = $client['id'] ?? $client['client_id'] ?? 'N/A';
+                $hasTenant = !empty($client['tenantId']) && $client['tenantId'] != 0;
+                $hasExpiry = !empty($client['expiry']) && $client['expiry'] != 0;
+
+                $issues = [];
+                if (!$hasTenant)
+                    $issues[] = 'Missing Tenant ID';
+                if (!$hasExpiry)
+                    $issues[] = 'Missing Expiry Date';
+
+                $email .= "  • " . $company . " (ID: " . $clientId . ") - " . implode(', ', $issues) . "\n";
+            }
+            $email .= "\n";
+        }
+
+        // 2. QUANTITY MISMATCHES
+        if ($totalDiscrepancies > 0) {
+            $email .= "2. QUANTITY MISMATCHES (" . $totalDiscrepancies . ")\n";
+            $email .= $minorDivider . "\n";
+
+            if (count($overcharging) > 0) {
+                $email .= "⚠️ Overcharging (" . count($overcharging) . "):\n";
+                foreach ($overcharging as $item) {
+                    $company = $item['companyname'] ?? 'Unknown';
+                    $product = $item['product_name'] ?? 'Unknown Product';
+                    $whmcs = $item['product_qty'] ?? 0;
+                    $dicker = $item['sub_qty'] ?? 0;
+                    $diff = $whmcs - $dicker;
+                    $email .= "  • " . $company . " - " . $product . "\n";
+                    $email .= "    WHMCS: " . $whmcs . ", Dicker: " . $dicker . " (overcharging by " . $diff . ")\n";
+                }
+                $email .= "\n";
+            }
+
+            if (count($undercharging) > 0) {
+                $email .= "⚠️ Undercharging (" . count($undercharging) . "):\n";
+                foreach ($undercharging as $item) {
+                    $company = $item['companyname'] ?? 'Unknown';
+                    $product = $item['product_name'] ?? 'Unknown Product';
+                    $whmcs = $item['product_qty'] ?? 0;
+                    $dicker = $item['sub_qty'] ?? 0;
+                    $diff = $dicker - $whmcs;
+                    $email .= "  • " . $company . " - " . $product . "\n";
+                    $email .= "    WHMCS: " . $whmcs . ", Dicker: " . $dicker . " (undercharging by " . $diff . ")\n";
+                }
+                $email .= "\n";
+            }
+        }
+
+        // 3. UNMATCHED SUBSCRIPTIONS
+        if ($totalUnmatched > 0) {
+            $email .= "3. UNMATCHED SUBSCRIPTIONS (" . $totalUnmatched . ")\n";
+            $email .= $minorDivider . "\n";
+
+            foreach ($unmatchedSubscriptions as $item) {
+                $company = $item['companyname'] ?? 'Unknown';
+                $desc = $item['stock_description'] ?? 'Unknown Product';
+                $qty = $item['quantity'] ?? 0;
+                $msc = $item['manufacturer_stock_code'] ?? 'N/A';
+
+                $email .= "  • " . $company . " - " . $desc . " (Qty: " . $qty . ")\n";
+                $email .= "    MSC: " . $msc . " - No mapping found in WHMCS\n";
+            }
+            $email .= "\n";
+        }
+
+        // EXCEPTIONS SECTION (optional)
+        if ($includeExceptions && $totalExceptions > 0) {
+            $email .= "ℹ️ EXCEPTIONS APPLIED (" . $totalExceptions . ")\n";
+            $email .= $divider . "\n";
+            $email .= "These items were filtered out of the report above:\n\n";
+
+            // Client-level exceptions
+            foreach ($clientExceptions as $exc) {
+                $company = $exc['companyname'] ?? 'Unknown';
+                $type = $exc['type'] ?? 'unknown';
+                $reason = $exc['reason'] ?? 'No reason provided';
+                $typeLabel = $type === 'missing_tenant_id' ? 'Missing Tenant ID' : 'Missing Expiry';
+
+                $email .= "  • " . $company . " - " . $typeLabel . "\n";
+                $email .= "    Reason: " . $reason . "\n";
+            }
+
+            // Quantity/subscription exceptions
+            foreach ($quantityExceptions as $exc) {
+                $company = $exc['companyname'] ?? 'Unknown';
+                $product = $exc['product_name'] ?? $exc['stock_description'] ?? 'Unknown';
+                $whmcs = $exc['product_qty'] ?? $exc['expected_whmcs_qty'] ?? 0;
+                $dicker = $exc['sub_qty'] ?? $exc['quantity'] ?? $exc['expected_dicker_qty'] ?? 0;
+                $reason = $exc['exception_reason'] ?? $exc['reason'] ?? 'No reason provided';
+
+                $email .= "  • " . $company . " - " . $product . ": " . $whmcs . "/" . $dicker . "\n";
+                $email .= "    Reason: " . $reason . "\n";
+            }
+
+            $email .= "\n";
+        }
+
+        // ACTIONS REQUIRED
+        // $email .= "📎 ACTIONS REQUIRED\n";
+        // $email .= $divider . "\n";
+
+        // if ($totalProblematic > 0) {
+        //     $email .= "1. Review problematic clients - add missing tenant IDs/expiry dates or create exceptions\n";
+        // }
+        // if ($totalDiscrepancies > 0) {
+        //     $email .= "2. Check quantity mismatches for billing accuracy - adjust WHMCS or create exceptions\n";
+        // }
+        // if ($totalUnmatched > 0) {
+        //     $email .= "3. Map unmatched subscriptions in the dashboard mapping section\n";
+        // }
+
+        $email .= $minorDivider . "\n";
+        $dashboardUrl = $_ENV['DASHBOARD_URL'] ?? 'http://localhost/msdd/';
+        $email .= "\nView full dashboard: " . $dashboardUrl . "\n\n";
+
+        $email .= "Report generated: " . date('Y-m-d H:i:s') . "\n";
+
+        return $email;
+    }
+
     public function arrayToTemplate($array, $template, $title = '')
     {
         if (count($array) === 0) {

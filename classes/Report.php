@@ -220,7 +220,6 @@ class Report
 
         return false;
     }
-
     public function generate()
     {
         $matched = $this->matchSubscriptions();
@@ -229,6 +228,8 @@ class Report
             'whmcs' => $this->whmcs_data,
             'dicker' => $this->dicker_data,
             'matched' => $matched,
+            'discrepancy_report' => $matched['discrepancy_report'] ?? [],
+            'unmatched_subscriptions_report' => $matched['unmatched_subscriptions_report'] ?? [],
             'exceptions_applied' => $matched['exceptions_applied'] ?? [],
             'unmatched' => [],
             'missing' => [],

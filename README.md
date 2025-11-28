@@ -34,6 +34,9 @@ Required keys used by the script:
 - `DICKER_url` — base URL for Dicker Data API (e.g. `https://api.dickerdata/.../`)
 - `DICKER_access_token` — access token used to request a temporary bearer/access key
 - `MAIL_TO`, `MAIL_SUBJECT` — used when running `?cron=1` to email the report
+- `MAIL_ONLY_SEND_IF_ISSUES` — (Optional, default: `true`) Only send email if issues are found
+- `MAIL_INCLUDE_EXCEPTIONS` — (Optional, default: `false`) Include exceptions section in email
+- `DASHBOARD_URL` — (Optional) Full URL to dashboard for email links (e.g. `https://your-domain.com/msdd/`)
 - (Optional) WHMCS API keys are present in code as env variables but WHMCS API usage is not required for the current flows.
 
 If any of the DB/Dicker env keys are missing, the dashboard will show red in the Environment panel.
