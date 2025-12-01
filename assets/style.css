@@ -1,0 +1,47 @@
+/* Light mode variables (default) */
+:root {
+  --scrollbar-thumb-bg: #e5e7eb;
+  /* gray-200 */
+  --scrollbar-track-bg: #f3f4f6;
+  /* gray-100 */
+}
+
+/* Dark mode variables (applied when 'dark' class is present on a parent element, e.g., <html>) */
+.dark {
+  --scrollbar-thumb-bg: #4b5563;
+  /* gray-600 */
+  --scrollbar-track-bg: #1f2937;
+  /* gray-800 */
+}
+
+/* Custom scrollbar styling for WebKit browsers */
+body::-webkit-scrollbar,
+.custom-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+body::-webkit-scrollbar-track,
+.custom-scroll::-webkit-scrollbar-track {
+  background: var(--scrollbar-track-bg);
+  border-radius: 10px;
+}
+
+body::-webkit-scrollbar-thumb,
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb-bg);
+  border-radius: 10px;
+}
+
+/* Optional: style on hover */
+body::-webkit-scrollbar-thumb:hover,
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+  /* A slightly different shade for hover, can also be a CSS var */
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}

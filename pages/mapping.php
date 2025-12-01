@@ -1,5 +1,5 @@
 <!-- Mapping editor -->
-<div class="mb-8">
+<div class="mb-8" id="section-mapping">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
         <h2 class="text-2xl font-semibold mb-4 flex items-center text-gray-900 dark:text-white">
             <svg class="w-6 h-6 mr-2 text-indigo-500 dark:text-indigo-400" fill="none" stroke="currentColor"

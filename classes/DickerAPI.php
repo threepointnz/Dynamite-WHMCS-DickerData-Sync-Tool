@@ -322,6 +322,9 @@ class DickerAPI
     {
         $organisedSubscriptions = [];
         if (is_array($subscriptionDetails) || is_object($subscriptionDetails)) {
+            if (!isset($subscriptionDetails["Out"]) || !is_array($subscriptionDetails["Out"])) {
+                return $organisedSubscriptions; // return empty if no subscriptions
+            }
             foreach ($subscriptionDetails["Out"] as $subscription) {
                 // group by TenantId, under the TenantId we want SubscriptionReference and ConfirmedQuantity
                 $tenantId = $subscription['TenantId'];
@@ -366,6 +369,9 @@ class DickerAPI
     {
         $allSubscriptions = $this->getSubscriptionDetails(null, null, null, null, 'CSP', false);
         $packages = [];
+        if (!isset($allSubscriptions["Out"]) || !is_array($allSubscriptions["Out"])) {
+            return []; // return empty if no subscriptions
+        }
         foreach ($allSubscriptions["Out"] as $subscription) {
             if (!empty($subscription['ManufacturerStockCode'])) {
                 $safeMSC = preg_replace('/[^a-zA-Z0-9-_]/', '-', $subscription['ManufacturerStockCode']);

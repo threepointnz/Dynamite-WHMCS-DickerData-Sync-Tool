@@ -1,25 +1,40 @@
-</div> <!-- container -->
-
 <!-- Render any debug data -->
 <?php
 if (function_exists('renderDebugData')) {
     renderDebugData();
 }
 ?>
+</div> <!-- /inner content -->
+</main>
+</div> <!-- /flex wrapper -->
 
 <!-- Monaco Editor for JSON Viewing -->
 <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.34.1/min/vs/loader.js"></script>
-<script src="/tools/msdd/assets/app.js"></script>
+<script src="assets/app.js"></script>
 
-<script>    // Initialize Monaco Editor for all JSON containers
+<script>
+    // Navbar user menu toggle
     (function () {
-        console.log('Monaco initialization starting...');
+        const btn = document.getElementById('userMenuButton');
+        const menu = document.getElementById('userMenu');
+        if (!btn || !menu) return;
+
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            menu.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', function () {
+            menu.classList.add('hidden');
+        });
+    })();
+
+    // Initialize Monaco Editor for all JSON containers
+    (function () {
         require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.34.1/min/vs' } });
 
         require(['vs/editor/editor.main'], function () {
-            console.log('Monaco editor module loaded');
             const containers = document.querySelectorAll('.monaco-container');
-            console.log('Found ' + containers.length + ' Monaco containers');
 
             containers.forEach(container => {
                 const content = container.getAttribute('data-content');
@@ -38,49 +53,39 @@ if (function_exists('renderDebugData')) {
                         wordWrap: 'on',
                     });
 
-                    // Give Monaco a moment to compute folding ranges, then fold to show only top-level.
                     setTimeout(() => {
-                        // Try folding to level 2 (keeps top-level expanded, folds everything else).
                         const foldLevel2 = monEditor.getAction && monEditor.getAction('editor.foldLevel2');
                         if (foldLevel2) {
                             try { foldLevel2.run(); } catch (e) { /* ignore */ }
                             return;
                         }
 
-                        // Fallback: fold all then attempt to unfold first-level ranges if the actions exist.
                         const foldAll = monEditor.getAction && monEditor.getAction('editor.foldAll');
                         const unfoldLevel1 = monEditor.getAction && monEditor.getAction('editor.unfoldLevel1');
 
                         if (foldAll) {
                             try {
-                                const res = foldAll.run();
-                                // If we have an unfoldLevel1 action, run it after folding everything.
+                                foldAll.run();
                                 if (unfoldLevel1) {
-                                    // run after slight delay to ensure folding finished
                                     setTimeout(() => {
                                         try { unfoldLevel1.run(); } catch (e) { /* ignore */ }
                                     }, 80);
                                 }
                             } catch (e) {
-                                // ignore
+                                /* ignore */
                             }
                         } else {
-                            // Last-resort manual approach using folding contribution:
                             try {
                                 const folding = monEditor.getContribution && monEditor.getContribution('editor.contrib.folding');
                                 if (folding && folding.getFoldingModel) {
                                     folding.getFoldingModel().then(fm => {
                                         if (!fm) return;
-                                        // collapse everything first
                                         for (let i = 0; i < fm.regions.length; i++) {
                                             fm.setCollapsed(i, true);
                                         }
-                                        // then expand top-level regions (those starting at indent level 1)
                                         for (let i = 0; i < fm.regions.length; i++) {
                                             const startLine = fm.regions.getStartLineNumber(i);
-                                            const endLine = fm.regions.getEndLineNumber(i);
                                             const indent = monEditor.getModel().getLineFirstNonWhitespaceColumn(startLine);
-                                            // treat indent of 1 (or column 1) as top-level
                                             if (indent <= 1) {
                                                 fm.setCollapsed(i, false);
                                             }

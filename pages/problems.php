@@ -1,5 +1,5 @@
 <!-- WHMCS Missing Custom Fields -->
-<div class="mb-8">
+<div class="mb-8" id="section-problems">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
         <h2 class="text-2xl font-semibold mb-4 flex items-center text-gray-900 dark:text-white">
             <svg class="w-6 h-6 mr-2 text-yellow-500 dark:text-yellow-400" fill="none" stroke="currentColor"
