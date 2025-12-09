@@ -7,7 +7,7 @@ $allExceptions = array_merge(
 );
 ?>
 <?php if (!empty($allExceptions)): ?>
-    <div class="mt-8 mb-8" id="section-exceptions">
+    <div class="mt-8 mb-8">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
             <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
                 <h3 class="text-lg font-semibold text-blue-900 dark:text-blue-300 mb-3">

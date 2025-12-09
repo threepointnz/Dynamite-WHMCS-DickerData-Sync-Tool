@@ -98,7 +98,7 @@ $problems = $problematicClientsFiltered['filtered'];
 $clientExceptionsApplied = $problematicClientsFiltered['exceptions_applied'];
 
 // Handle cron mode (JSON output only)
-if (isset($_GET['cron']) && $_GET['cron'] === '1') {
+if (isset($_GET['cron'])) {
     $emailer = new Mail();
 
     // Count total issues (already filtered by exceptions)
@@ -126,7 +126,11 @@ if (isset($_GET['cron']) && $_GET['cron'] === '1') {
         );
 
         if (!empty($emailContent)) {
-            $mailResult = $emailer->send($_ENV['MAIL_TO'], $_ENV['MAIL_SUBJECT'], $emailContent);
+            if ($_GET['cron'] === '1')
+                $mailResult = $emailer->send($_ENV['MAIL_TO'], $_ENV['MAIL_SUBJECT'], $emailContent);
+            else
+                $mailResult = $emailer->send($_GET['cron'], $_ENV['MAIL_SUBJECT'], $emailContent);
+
             $response = array_merge($response, (array) $mailResult);
         }
     } else {
