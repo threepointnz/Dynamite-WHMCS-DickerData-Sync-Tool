@@ -8,12 +8,25 @@ class Mail
 
     public function send($to, $subject, $message)
     {
-        // Use the mail() function to send the email
-        $result = mail($to, $subject, $message);
-        // return and object ready to respond to an api caller
+        // Prepare headers (use env override if present)
+        $from = $_ENV['MAIL_FROM'] ?? 'mail@domain.co.nz';
+        $headers = [];
+        $headers[] = 'From: ' . $from;
+        $headers[] = 'Reply-To: ' . $from;
+        $headers[] = 'MIME-Version: 1.0';
+        $headers[] = 'Content-Type: text/plain; charset=UTF-8';
+        $headers[] = 'X-Mailer: PHP/' . phpversion();
+
+        $headersStr = implode("\r\n", $headers);
+
+        // Use the mail() function to send the email with headers
+        $result = mail($to, $subject, $message, $headersStr);
+
+        // return an object ready to respond to an api caller
         return (object) [
             'success' => (bool) $result,
-            'message' => $result ? 'Email sent successfully' : 'Failed to send email'
+            'message' => $result ? 'Email sent successfully' : 'Failed to send email',
+            'headers' => $headers // helpful for debugging
         ];
     }
 
